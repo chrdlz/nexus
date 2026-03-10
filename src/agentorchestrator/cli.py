@@ -86,7 +86,7 @@ def main() -> None:
                 directory=workspace_dir
             )
             print("Workspace manifest created successfully:")
-            pprint.pprint(manifest)
+            pprint(manifest.to_dict())
             sys.exit(0)
 
         except ManifestAlreadyExistsError:
@@ -94,7 +94,7 @@ def main() -> None:
             try:
                 existing = load_workspace(directory=workspace_dir)
                 print("Existing manifest.")
-                pprint.pprint(existing)
+                pprint(existing.to_dict())
             except ManifestNotFoundError:
                 print("Warning: manifest was expected but has not been found.")
                 sys.exit(1)
@@ -103,7 +103,7 @@ def main() -> None:
         try:
             manifest = load_workspace(directory=workspace_dir)
             print("Workspace status:")
-            pprint.pprint(manifest)
+            pprint(manifest.to_dict())
             sys.exit(0)
         except ManifestNotFoundError:
             print("Error: manifest.yaml not found in this directory. Is this a workspace?")
