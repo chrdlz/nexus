@@ -1,30 +1,14 @@
-# Parse command line and save command and options in variables
-
-# if command == "init":
-#   try:
-#       workspace_data = init_workspace(name=.., description=.., version=..)
-#       print success & workspace data
-#       exit(0)
-#   except ManifestAlreadyExistsError:
-#       print "Manifest already exists."
-#       load and show manifest
-#       exit(1)
-#
-# if command == "status":
-#     try:
-#         workspace_data = load_workspace()
-#         print formatted status from workspace_data
-#         exit(0)
-#     except ManifestNotFoundError:
-#         print "Manifest not found. This is not a repository."
-#         exit(1)
-
 import argparse
 from pathlib import Path
 from pprint import pprint
 import sys
-
 from .workspace import init_workspace, load_workspace, ManifestAlreadyExistsError, ManifestNotFoundError
+
+MSG_WS_INIT_SUCCESS = "Workspace manifest created successfully"
+MSG_MANIFEST_ALREADY_EXISTS = "Manifest.yaml already exists in current directory."
+MSG_MANIFEST_EXISTS = "Existing manifest."
+MSG_MANIFEST_EXPECTED_BUT_NOT_FOUND = "Warning: manifest was expected but has not been found."
+MSG_MANIFEST_NOT_FOUND = "Error: manifest.yaml not found in this directory. Is this a workspace?"
 
 def parse_args() -> argparse.Namespace:
 
@@ -72,6 +56,7 @@ def parse_args() -> argparse.Namespace:
 
     return parser.parse_args()
 
+
 def main() -> None:
     args = parse_args()
 
@@ -85,18 +70,18 @@ def main() -> None:
                 args.version,
                 directory=workspace_dir
             )
-            print("Workspace manifest created successfully:")
+            print(MSG_WS_INIT_SUCCESS + ":")
             pprint(manifest.to_dict())
             sys.exit(0)
 
         except ManifestAlreadyExistsError:
-            print("Manifest.yaml already exists in current directory.")
+            print(MSG_MANIFEST_ALREADY_EXISTS)
             try:
                 existing = load_workspace(directory=workspace_dir)
-                print("Existing manifest.")
+                print(MSG_MANIFEST_EXISTS)
                 pprint(existing.to_dict())
             except ManifestNotFoundError:
-                print("Warning: manifest was expected but has not been found.")
+                print(MSG_MANIFEST_EXPECTED_BUT_NOT_FOUND)
                 sys.exit(1)
 
     elif args.cmd == "status":
@@ -106,7 +91,7 @@ def main() -> None:
             pprint(manifest.to_dict())
             sys.exit(0)
         except ManifestNotFoundError:
-            print("Error: manifest.yaml not found in this directory. Is this a workspace?")
+            print(MSG_MANIFEST_NOT_FOUND)
             sys.exit(1)
 
 

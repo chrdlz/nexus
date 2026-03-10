@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import subprocess
+from agentorchestrator.cli import MSG_WS_INIT_SUCCESS, MSG_MANIFEST_NOT_FOUND
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]  # tests/ → project root
 
@@ -31,7 +32,7 @@ def test_manifest_init(tmp_path: Path) -> None:
 
     # assert process uscceeded
     assert cli_output.returncode == 0
-    assert "Workspace manifest created successfully:" in cli_output.stdout
+    assert MSG_WS_INIT_SUCCESS in cli_output.stdout
 
     # assert manifest created successfully
     manifest_path = tmp_path / "manifest.yaml"
@@ -42,4 +43,4 @@ def test_manifest_not_found(tmp_path: Path) -> None:
 
     # assert process uscceeded
     assert cli_output.returncode == 1
-    assert "Error: manifest.yaml not found in this directory" in cli_output.stdout
+    assert MSG_MANIFEST_NOT_FOUND in cli_output.stdout
