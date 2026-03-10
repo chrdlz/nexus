@@ -56,9 +56,9 @@ def manifest_exists(directory=None) -> bool:
 
 def init_workspace(
     name: str,
-    description: str | None,
-    version: str | None,
-    directory: str | None) -> Workspace:
+    description: str | None = None,
+    version: str | None = None,
+    directory: str | None = None) -> Workspace:
     """Initialize workspace.  Checks if workspace.yaml exists in provided directory or in cwd.
     If already exists, raises ManifestAlreadyExistsError.
     
