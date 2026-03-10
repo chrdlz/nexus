@@ -1,9 +1,10 @@
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Optional
 
-RUN_CLS_DEFAULT_FINISHEDAT = ""
-RUN_CLS_DEFAULT_OUTPUT = ""
-RUN_CLS_DEFAULT_ERROR = ""
+RUN_CLS_DEFAULT_FINISHEDAT = None
+RUN_CLS_DEFAULT_OUTPUT = None
+RUN_CLS_DEFAULT_ERROR = None
 
 @dataclass
 class Run:
@@ -31,5 +32,15 @@ class Run:
             log_path = d["log_path"]
         )
 
-    def as_dict(self) -> dict:
+    def to_dict(self) -> dict:
         return asdict(self)
+
+
+def get_run_path(root: Path, run_id: str) -> Path:
+    """Retrieves the path of a run's yaml files."""
+    return root / ".coral" / "runs" / f"{run_id}.yaml"
+    
+
+def get_log_path(root: Path, log_id: str) -> Path:
+    """Retrieves the path of a run's logs files."""
+    return root / ".coral" / "logs" / f"{log_id}.log"

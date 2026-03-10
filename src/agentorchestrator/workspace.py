@@ -1,3 +1,4 @@
+from nt import mkdir
 from pathlib import Path
 import yaml
 import datetime
@@ -82,6 +83,16 @@ def init_workspace(
         )
 
     manifest_path.write_text(yaml.safe_dump(w.to_dict(), sort_keys=False))
+
+    # Check existance of .coral/runs & .coral/logs
+    coral_path = directory / ".coral"
+    coral_runs_path = coral_path / "runs"
+    coral_logs_path = coral_path / "logs"
+
+    coral_path.mkdir(parents=True, exist_ok=True)
+    coral_runs_path.mkdir(parents=True, exist_ok=True)
+    coral_logs_path.mkdir(parents=True, exist_ok=True)
+
     return w
 
 def load_workspace(directory=None) -> Workspace:
