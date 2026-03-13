@@ -1,16 +1,28 @@
+from csv import Error
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 RUN_CLS_DEFAULT_FINISHEDAT = None
 RUN_CLS_DEFAULT_OUTPUT = None
 RUN_CLS_DEFAULT_ERROR = None
 
+RunStatus = Literal["pending", "running", "succeeded", "failed"]
+
+ALLOWED_RUN_STATUSES: set[RunStatus] = {
+    "pending",
+    "running",
+    "succeeded",
+    "failed",
+}
+
+class InvalidStatusError(Exception): pass
+
 @dataclass
 class Run:
     id: str
     agent: str
-    status: str
+    status: RunStatus
     started_at: str
     finished_at: Optional[str]
     input: str
@@ -20,10 +32,15 @@ class Run:
 
     @classmethod
     def from_dict(cls, d: dict) -> "Run":
+        # validation
+        raw_status = d["status"]
+        if raw_status not in ALLOWED_RUN_STATUSES:
+            raise InvalidStatusError
+
         return cls(
             id = d["id"],
             agent = d["agent"],
-            status = d["status"],
+            status = raw_status,
             started_at = d["started_at"],
             finished_at = d.get("finished_at",RUN_CLS_DEFAULT_FINISHEDAT),
             input = d["input"],
