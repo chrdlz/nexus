@@ -1,18 +1,20 @@
+"""Tests for run module: Run dataclass, from_dict/to_dict, and path helpers."""
 import datetime
-from math import log
 from pathlib import Path
 
 import yaml
 import agentorchestrator.run as r
 from agentorchestrator.workspace import init_workspace
 
+
 def test_run_roundtrip(tmp_path: Path) -> None:
+    """Writing a Run to YAML and loading back via from_dict yields an equal Run."""
     ws_dir = tmp_path
     init_workspace("test-ws", directory=ws_dir)
 
     run_id = "myid"
     log_rel_path = f".coral/logs/{run_id}.log"
-    
+
     run = r.Run(
         id = run_id,
         agent="myagent",

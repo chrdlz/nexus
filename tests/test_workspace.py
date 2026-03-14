@@ -1,25 +1,17 @@
 # tests/test_workspace.py
-
-"""
-Import workspace fuctions
-Arrange situation
-Call function
-Assert expected results 
-"""
-
-# tests
-# test init creates manifest and workspace is consistent with expected manifest
+"""Tests for workspace module: init, load, manifest consistency, and double-init error."""
 from pathlib import Path
 
-import agentorchestrator.workspace as ws 
+import agentorchestrator.workspace as ws
 import pytest
 
 
 def test_init_consistency_manifest(tmp_path: Path) -> None:
-    ws_dir = tmp_path 
+    """Init creates manifest and loaded workspace matches expected name, description, version."""
+    ws_dir = tmp_path
     w = ws.init_workspace("mymanifest", "mydesc", "1.1.1", directory=ws_dir)
 
-    # Assert Workspace object looks right
+    # Assert Workspace object matches arguments
     assert w.name == "mymanifest"
     assert w.description == "mydesc"
     assert w.version == "1.1.1"
@@ -35,12 +27,12 @@ def test_init_consistency_manifest(tmp_path: Path) -> None:
     assert loaded.description == "mydesc"
     assert loaded.version == "1.1.1"
 
-# test init workspace once, assert ok, init once again assert error
 def test_double_init_raise_error(tmp_path: Path) -> None:
-    ws_dir = tmp_path 
-    ws.init_workspace("mymanifest", directory=ws_dir) # first time should be OK
+    """Second init in the same directory raises ManifestAlreadyExistsError."""
+    ws_dir = tmp_path
+    ws.init_workspace("mymanifest", directory=ws_dir)  # first time succeeds
 
-    # # Second time shuld fail
+    # Second init must raise
     # try:
     #     ws.init_workspace("mymanifest", directory=ws_dir)
     #     assert False, "Warning: expected ManifestAlreadyExistsError."

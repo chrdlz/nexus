@@ -1,9 +1,21 @@
+"""CLI entrypoint: argument parsing and command dispatch for the agent orchestrator.
+
+Provides the ``agentorchestrator`` command with subcommands (e.g. init, status)
+and -C/--directory for workspace path. Delegates to workspace and run modules
+for actual work.
+"""
 import argparse
 from pathlib import Path
 from pprint import pprint
 import sys
-from .workspace import init_workspace, load_workspace, ManifestAlreadyExistsError, ManifestNotFoundError
+from .workspace import (
+    init_workspace,
+    load_workspace,
+    ManifestAlreadyExistsError,
+    ManifestNotFoundError,
+)
 
+# User-facing messages for init and status commands
 MSG_WS_INIT_SUCCESS = "Workspace manifest created successfully"
 MSG_MANIFEST_ALREADY_EXISTS = "Manifest.yaml already exists in current directory."
 MSG_MANIFEST_EXISTS = "Existing manifest."
@@ -11,8 +23,14 @@ MSG_MANIFEST_EXPECTED_BUT_NOT_FOUND = "Warning: manifest was expected but has no
 MSG_MANIFEST_NOT_FOUND = "Error: manifest.yaml not found in this directory. Is this a workspace?"
 
 def parse_args() -> argparse.Namespace:
+    """Build and parse CLI arguments (global -C and subcommands init, status).
 
-    # Parser
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments; ``cmd`` is the subcommand name, plus command-specific
+        fields (e.g. name, description, version for init).
+    """
     parser = argparse.ArgumentParser(
         prog="agentorchestrator",
         description="Workspace CLI parser."
@@ -26,38 +44,38 @@ def parse_args() -> argparse.Namespace:
         help="Workspace directory (default to current working directory)."
     )
 
-    subparser = parser.add_subparsers(dest='cmd', required=True)
-    init_parser = subparser.add_parser('init', help="Initialise workspace.")
+    subparser = parser.add_subparsers(dest="cmd", required=True)
+    init_parser = subparser.add_parser("init", help="Initialise workspace.")
 
-    # Required
+    # init: required positional
     init_parser.add_argument(
         'name',
         type=str,
-        help='[required] Workspace name'
+        help="[required] Workspace name",
     )
 
-    # Optional
+    # init: optional
     init_parser.add_argument(
-        '-d',
-        '--description',
+        "-d",
+        "--description",
         default=None,
         help="Workspace description. Please make a short summary of the intent and project in this workspace."
     )
 
-    # Optional
     init_parser.add_argument(
-        '-v',
-        '--version',
+        "-v",
+        "--version",
         default=None,
         help="Workspace version."
     )
 
-    status_parser = subparser.add_parser('status', help="Show workspace status.")
+    subparser.add_parser("status", help="Show workspace status.")
 
     return parser.parse_args()
 
 
 def main() -> None:
+    """Parse CLI args, dispatch to init or status, and exit with appropriate code."""
     args = parse_args()
 
     workspace_dir = Path(args.directory) if args.directory is not None else Path.cwd()

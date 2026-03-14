@@ -218,3 +218,6 @@ __marimo__/
 tmp/*
 
 .cursor/
+
+notes.md
+ROADMAP.md
