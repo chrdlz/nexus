@@ -109,7 +109,7 @@ def get_run_path(root: Path, run_id: str) -> Path:
     Path
         Path to ``.coral/runs/{run_id}.yaml``.
     """
-    return root / get_run_log_runs_relative(run_id=run_id, type="runs")
+    return root / get_coral_path_relative(run_id=run_id, type="runs")
 
 
 def get_log_path(root: Path, log_id: str) -> Path:
