@@ -5,8 +5,12 @@ run status values, and provides helpers to resolve paths to run YAML files and
 log files under .coral/runs and .coral/logs.
 """
 from dataclasses import asdict, dataclass
+import datetime
 from pathlib import Path
 from typing import Literal, Optional
+import secrets
+
+import yaml
 
 # Defaults for optional Run fields when loading from dict
 RUN_CLS_DEFAULT_FINISHEDAT = None
@@ -105,7 +109,7 @@ def get_run_path(root: Path, run_id: str) -> Path:
     Path
         Path to ``.coral/runs/{run_id}.yaml``.
     """
-    return root / ".coral" / "runs" / f"{run_id}.yaml"
+    return root / get_run_log_runs_relative(run_id=run_id, type="runs")
 
 
 def get_log_path(root: Path, log_id: str) -> Path:
@@ -123,4 +127,39 @@ def get_log_path(root: Path, log_id: str) -> Path:
     Path
         Path to ``.coral/logs/{log_id}.log``.
     """
-    return root / ".coral" / "logs" / f"{log_id}.log"
+    return root / get_coral_path_relative(run_id=log_id)
+
+def get_coral_path_relative(run_id: str, type: str = "log") -> str:
+    if type == "runs":
+        return f".coral/runs/{run_id}.yaml"
+    else:
+        return f".coral/logs/{run_id}.log"
+    
+
+def record_run(
+    root: Path, 
+    agent: str,
+    input: str,
+    ) -> Run:
+
+    run_id = secrets.token_hex(8)   # 8 bytes → 16 hex chars
+    log_path = get_log_path(root=root, log_id=run_id)
+
+    r = Run(
+        id = run_id, 
+        agent = agent,
+        status = "running",
+        started_at = str(datetime.datetime.now(datetime.timezone.utc)).split(".")[0],
+        finished_at=None,
+        input=input,
+        output=None,
+        error=None,
+        log_path=get_coral_path_relative(run_id)
+    )
+
+    get_run_path(root=root, run_id=run_id).write_text(yaml.safe_dump(r.to_dict(), sort_keys=False))
+
+    with open(log_path, "a") as f:
+        f.write(r.started_at + ": Run started\n")
+
+    return r
