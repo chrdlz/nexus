@@ -1,6 +1,6 @@
-"""CLI entrypoint: argument parsing and command dispatch for the agent orchestrator.
+"""CLI entrypoint: argument parsing and command dispatch for Nexus.
 
-Provides the ``agentorchestrator`` command with subcommands (e.g. init, status)
+Provides the ``nexus`` command with subcommands (e.g. init, status)
 and -C/--directory for workspace path. Delegates to workspace and run modules
 for actual work.
 """
@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
         fields (e.g. name, description, version for init).
     """
     parser = argparse.ArgumentParser(
-        prog="agentorchestrator",
+        prog="nexus",
         description="Workspace CLI parser."
     )
 

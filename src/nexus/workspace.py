@@ -2,7 +2,7 @@
 
 This module manages the manifest.yaml file that defines a workspace (name,
 description, version, created_at) and ensures the expected directory layout
-(.coral/runs, .coral/logs) exists after initialization.
+(.nexus/runs, .nexus/logs) exists after initialization.
 """
 from pathlib import Path
 import yaml
@@ -122,10 +122,10 @@ def init_workspace(
     version: str | None = None,
     directory: str | None = None,
 ) -> Workspace:
-    """Create a new workspace: write manifest.yaml and ensure .coral layout.
+    """Create a new workspace: write manifest.yaml and ensure .nexus layout.
 
     Creates manifest.yaml in the given directory (or cwd) and creates
-    .coral/runs and .coral/logs if they do not exist.
+    .nexus/runs and .nexus/logs if they do not exist.
 
     Parameters
     ----------
@@ -170,14 +170,14 @@ def init_workspace(
 
     manifest_path.write_text(yaml.safe_dump(w.to_dict(), sort_keys=False))
 
-    # Ensure .coral/runs and .coral/logs exist for run and log storage
-    coral_path = directory / ".coral"
-    coral_runs_path = coral_path / "runs"
-    coral_logs_path = coral_path / "logs"
+    # Ensure .nexus/runs and .nexus/logs exist for run and log storage
+    nexus_path = directory / ".nexus"
+    nexus_runs_path = nexus_path / "runs"
+    nexus_logs_path = nexus_path / "logs"
 
-    coral_path.mkdir(parents=True, exist_ok=True)
-    coral_runs_path.mkdir(parents=True, exist_ok=True)
-    coral_logs_path.mkdir(parents=True, exist_ok=True)
+    nexus_path.mkdir(parents=True, exist_ok=True)
+    nexus_runs_path.mkdir(parents=True, exist_ok=True)
+    nexus_logs_path.mkdir(parents=True, exist_ok=True)
 
     return w
 
@@ -206,4 +206,3 @@ def load_workspace(directory=None) -> Workspace:
     manifest_path = get_manifest_path(directory)
     data = yaml.safe_load(manifest_path.read_text())
     return Workspace.from_dict(data)
-

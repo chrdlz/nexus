@@ -2,7 +2,7 @@
 
 This module defines the Run dataclass (agent run metadata and status), validates
 run status values, and provides helpers to resolve paths to run YAML files and
-log files under .coral/runs and .coral/logs.
+log files under .nexus/runs and .nexus/logs.
 """
 from dataclasses import asdict, dataclass
 import datetime
@@ -95,7 +95,7 @@ class Run:
 
 
 def get_run_path(root: Path, run_id: str) -> Path:
-    """Return the path to a run's YAML file under .coral/runs.
+    """Return the path to a run's YAML file under .nexus/runs.
 
     Parameters
     ----------
@@ -107,13 +107,13 @@ def get_run_path(root: Path, run_id: str) -> Path:
     Returns
     -------
     Path
-        Path to ``.coral/runs/{run_id}.yaml``.
+        Path to ``.nexus/runs/{run_id}.yaml``.
     """
-    return root / get_coral_path_relative(run_id=run_id, type="runs")
+    return root / get_nexus_path_relative(run_id=run_id, type="runs")
 
 
 def get_log_path(root: Path, log_id: str) -> Path:
-    """Return the path to a run's log file under .coral/logs.
+    """Return the path to a run's log file under .nexus/logs.
 
     Parameters
     ----------
@@ -125,15 +125,16 @@ def get_log_path(root: Path, log_id: str) -> Path:
     Returns
     -------
     Path
-        Path to ``.coral/logs/{log_id}.log``.
+        Path to ``.nexus/logs/{log_id}.log``.
     """
-    return root / get_coral_path_relative(run_id=log_id)
+    return root / get_nexus_path_relative(run_id=log_id)
 
-def get_coral_path_relative(run_id: str, type: str = "log") -> str:
+
+def get_nexus_path_relative(run_id: str, type: str = "log") -> str:
+    """Return relative path for a run YAML or log file under .nexus/runs or .nexus/logs."""
     if type == "runs":
-        return f".coral/runs/{run_id}.yaml"
-    else:
-        return f".coral/logs/{run_id}.log"
+        return f".nexus/runs/{run_id}.yaml"
+    return f".nexus/logs/{run_id}.log"
     
 
 def record_run(
@@ -154,7 +155,7 @@ def record_run(
         input=input,
         output=None,
         error=None,
-        log_path=get_coral_path_relative(run_id)
+        log_path=get_nexus_path_relative(run_id)
     )
 
     get_run_path(root=root, run_id=run_id).write_text(yaml.safe_dump(r.to_dict(), sort_keys=False))

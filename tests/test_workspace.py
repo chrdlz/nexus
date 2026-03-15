@@ -2,7 +2,7 @@
 """Tests for workspace module: init, load, manifest consistency, and double-init error."""
 from pathlib import Path
 
-import agentorchestrator.workspace as ws
+import nexus.workspace as ws
 import pytest
 
 

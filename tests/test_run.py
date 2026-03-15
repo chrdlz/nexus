@@ -3,8 +3,8 @@ import datetime
 from pathlib import Path
 
 import yaml
-import agentorchestrator.run as r
-from agentorchestrator.workspace import init_workspace
+import nexus.run as r
+from nexus.workspace import init_workspace
 
 
 def test_run_roundtrip(tmp_path: Path) -> None:
@@ -13,7 +13,7 @@ def test_run_roundtrip(tmp_path: Path) -> None:
     init_workspace("test-ws", directory=ws_dir)
 
     run_id = "myid"
-    log_rel_path = f".coral/logs/{run_id}.log"
+    log_rel_path = f".nexus/logs/{run_id}.log"
 
     run = r.Run(
         id = run_id,
@@ -31,7 +31,7 @@ def test_run_roundtrip(tmp_path: Path) -> None:
     run_path_created = r.get_run_path(ws_dir, run_id)
     run_path_created.write_text(yaml.safe_dump(run.to_dict(), sort_keys=False))
 
-    run_path = ws_dir / ".coral/runs" / f"{run_id}.yaml"
+    run_path = ws_dir / ".nexus/runs" / f"{run_id}.yaml"
     assert run_path.exists()
 
     loaded_dict = yaml.safe_load(run_path.read_text())

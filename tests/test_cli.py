@@ -2,14 +2,14 @@
 import os
 from pathlib import Path
 import subprocess
-from agentorchestrator.cli import MSG_WS_INIT_SUCCESS, MSG_MANIFEST_NOT_FOUND
+from nexus.cli import MSG_WS_INIT_SUCCESS, MSG_MANIFEST_NOT_FOUND
 
 # Project root (parent of tests/) for PYTHONPATH and cwd when running CLI
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def run_cli(tmp_path: Path, *args: str) -> subprocess.CompletedProcess:
-    """Run agentorchestrator CLI with -C tmp_path and given args; return CompletedProcess.
+    """Run nexus CLI with -C tmp_path and given args; return CompletedProcess.
 
     Parameters
     ----------
@@ -26,7 +26,7 @@ def run_cli(tmp_path: Path, *args: str) -> subprocess.CompletedProcess:
     cmd = [
         "python3",
         "-m",
-        "agentorchestrator.cli",
+        "nexus.cli",
         "-C",
         str(tmp_path),
         *args,
