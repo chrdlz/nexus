@@ -179,6 +179,11 @@ def init_workspace(
     nexus_runs_path.mkdir(parents=True, exist_ok=True)
     nexus_logs_path.mkdir(parents=True, exist_ok=True)
 
+    # Ensure .nexus/agents.yaml exists
+    agents_registry_path = nexus_path / "agents.yaml"
+    if not agents_registry_path.exists():
+        agents_registry_path.write_text("agents: []\n")
+
     return w
 
 
