@@ -1,9 +1,7 @@
 from ast import List
-from csv import Error
 from pathlib import Path
-from typing import Any, Dict
+from typing import Dict
 import yaml
-from nexus import workspace
 from nexus.agent import Agent
 
 class AgentsRegistryNotFound(Exception):
