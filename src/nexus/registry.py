@@ -1,10 +1,17 @@
+from ast import List
+from csv import Error
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 import yaml
+from nexus import workspace
 from nexus.agent import Agent
 
 class AgentsRegistryNotFound(Exception):
-    """Raise when agents registry "agents.yaml" is not found"""
+    """Raise when agents registry "agents.yaml" is not found."""
+    pass
+
+class UnknownAgentError(Exception):
+    """Raise when agent name doesn't exist in registry."""
     pass
 
 
@@ -38,5 +45,19 @@ def load_agents(workspace_root: str) -> dict:
         )
         agents[agent.name] = agent
     return agents
+
+
+def get_agent(workspace_root: Path, agent_name: str) -> Agent:
+    agents = load_agents(workspace_root)
+
+    try:
+        return agents[agent_name]
+    except KeyError:
+        raise UnknownAgentError(f"Unknowns agent: {agent_name!r}") from None
+    pass
+
+
+def list_agents(workspace_root: Path) -> List[Agent]:
+    return list[Agent](load_agents(workspace_root).values())
 
 
