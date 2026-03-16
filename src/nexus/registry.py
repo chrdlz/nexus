@@ -1,11 +1,14 @@
 from pathlib import Path
+from typing import Dict
+import yaml
+from nexus.agent import Agent
 
 class AgentsRegistryNotFound(Exception):
     """Raise when agents registry "agents.yaml" is not found"""
     pass
 
 
-def get_agents(workspace_root: Path) -> Path:
+def get_agents_path(workspace_root: Path) -> Path:
 
     agents_path = workspace_root / ".nexus" / "agents.yaml"
 
@@ -13,3 +16,27 @@ def get_agents(workspace_root: Path) -> Path:
         raise AgentsRegistryNotFound
     
     return agents_path
+
+
+def load_agents(workspace_root: str) -> dict:
+    cfg_path = get_agents_path(workspace_root)
+    if not cfg_path.exists():
+        # raise error
+        return {}
+
+    raw = yaml.safe_load(cfg_path.read_text()) or {}
+    raw_agents = raw.get("agents", []) or []
+
+    agents: Dict[str, Agent] = {}
+    for item in raw_agents:
+        agent = Agent(
+            name=item['name'],
+            description=item['description'],
+            command=list[str](item['command']),
+            allowed_tools=item.get('allowed_tools'),
+            llm_profile=item.get('llm_profile'),
+        )
+        agents[agent.name] = agent
+    return agents
+
+
