@@ -300,6 +300,28 @@ Observability is essential from the beginning, even in CLI form.
 
 ---
 
+## Tool and Provider Layer
+
+Agents rarely act in isolation. They rely on tools to inspect and modify the
+workspace or to call external systems. Nexus should provide a clear provider
+layer through which agents access these tools.
+
+Responsibilities:
+
+- expose a catalog of tools available in the current workspace or scope
+- enforce per-agent permissions and capability allowlists
+- mediate access to external systems (for example, deployment APIs, CI, or databases)
+- log tool invocations for observability and safety
+
+Implementation notes:
+
+- In early stages this may be a thin local abstraction around built-in helpers.
+- Long term, tool providers may be backed by one or more MCP-compatible
+  servers declared in workspace configuration, so that Nexus agents can
+  discover and call workspace-specific tools through a stable interface.
+
+---
+
 ## API Layer
 
 The API layer comes after the CLI foundation.
@@ -310,6 +332,8 @@ It will expose Nexus as a real control plane, making it possible to:
 - trigger actions
 - integrate with other clients
 - power future dashboards
+- enumerate configured tool providers (including MCP-backed ones) and
+  inspect their usage
 
 Nexus should eventually be API-first in spirit, even if it starts CLI-first in implementation.
 
@@ -330,6 +354,7 @@ The dashboard should eventually support:
 - approvals
 - system health
 - nested workspace visualization
+- inspection of available tools and providers per workspace or agent
 
 ---
 
@@ -345,6 +370,8 @@ Possible future examples:
 - agents scoped to a service directory
 - subdirectory-local prompts and manifests
 - agent spawning based on project structure
+- subdirectory-local tool providers (for example, MCP servers configured
+  for a specific service or package)
 
 This is a long-term direction, not an early implementation goal.
 

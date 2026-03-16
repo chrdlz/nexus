@@ -192,6 +192,8 @@ Capabilities added:
 - runtime inspection
 - agent control through API
 - run history access
+- inspection of configured tool providers (including MCP-backed ones) and
+  their usage across runs
 
 This API will eventually power:
 
@@ -220,6 +222,7 @@ Capabilities added:
 - event inspection
 - runtime control
 - prompt editing
+- visibility into available tools and providers per workspace and agent
 
 The first dashboard may be simple.
 
@@ -252,6 +255,8 @@ Capabilities added:
 - local agent clusters
 - hierarchical triggers
 - workspace segmentation
+- subdirectory-local tool providers (for example, MCP servers attached to
+  specific services or packages)
 
 Conceptually this resembles:
 
@@ -277,6 +282,8 @@ Possible directions:
 - provider adapters
 - advanced scheduling
 - dependency graphs
+- deeper integration with MCP and similar provider standards so that
+  workspace tools can be discovered and governed consistently
 
 These features support more sophisticated agent ecosystems.
 
