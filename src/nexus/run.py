@@ -183,11 +183,13 @@ def end_run(
     r['output'] = output_text
     r['error'] = error_text if error_text!=None else None
 
+    # write on id.yamls
     u.overwrite_yaml(
         path=get_run_path(root=root, run_id=r.id),
         data=r
     )
 
+    # write on id.log
     log_entry = r['finished_at'] + ": Run finished (" + r['status'] + ", exit=" + str(exit_code) + ")"
     u.append_text(log_path, log_entry)
 
