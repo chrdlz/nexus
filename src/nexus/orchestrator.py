@@ -19,18 +19,22 @@ def spawn_agent(workspace_dir: Path, agent: Agent, input: str) -> (Run, int):
     output_text=RUN_FAILED_BEFORE_RUNNING
 
     try:
-        exit_code = run_and_log_separate(dir=workspace_dir,agent=agent, log_path=log_file)
+        exit_code = run_and_log_separate(running_dir=workspace_dir,agent=agent, log_path=log_file)
+    
     except Exception as e:
         error_summary = f"{type(e).__name__}: {e}"
         tb = traceback.format_exc()
         append_text(log_file, text=tb)
+    
     finally:
+
         if exit_code == 0:
             output_text = RUN_SUCCESSFUL
             error_summary = None
         else:
-            output_text = RUN_SUCCESSFUL
+            output_text = RUN_FAILED
             error_summary = f"exit={exit_code}"
+
         r_end = end_run(
             root=workspace_dir,
             run=r,

@@ -174,9 +174,9 @@ def end_run(
     error_text: str = None,
     ) -> Run:
 
-    r = run.to_dict()
+    log_path = get_log_path(root=root, log_id=run.id)
 
-    log_path = get_log_path(root=root, log_id=r.id)
+    r = run.to_dict()
 
     r['finished_at'] = str(datetime.datetime.now(datetime.timezone.utc)).split(".")[0]
     r['status'] = "succeeded" if exit_code == 0 else "failed"
@@ -185,7 +185,7 @@ def end_run(
 
     # write on id.yamls
     u.overwrite_yaml(
-        path=get_run_path(root=root, run_id=r.id),
+        path=get_run_path(root=root, run_id=r["id"]),
         data=r
     )
 
