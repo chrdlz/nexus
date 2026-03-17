@@ -16,7 +16,7 @@ class UnknownAgentError(Exception):
 def get_agents_path(workspace_root: Path) -> Path:
 
     agents_path = workspace_root / ".nexus" / "agents.yaml"
-
+    
     if not agents_path.exists():
         raise AgentsRegistryNotFound
     

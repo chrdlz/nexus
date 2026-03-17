@@ -5,9 +5,14 @@ and -C/--directory for workspace path. Delegates to workspace and run modules
 for actual work.
 """
 import argparse
+from ast import arg
 from pathlib import Path
 from pprint import pprint
 import sys
+import traceback
+
+from nexus.orchestrator import spawn_agent
+from nexus.registry import UnknownAgentError, get_agent
 from .workspace import (
     init_workspace,
     load_workspace,
@@ -45,6 +50,8 @@ def parse_args() -> argparse.Namespace:
     )
 
     subparser = parser.add_subparsers(dest="cmd", required=True)
+
+    # ----- init workspace parser -----
     init_parser = subparser.add_parser("init", help="Initialise workspace.")
 
     # init: required positional
@@ -69,7 +76,24 @@ def parse_args() -> argparse.Namespace:
         help="Workspace version."
     )
 
+    # ----- Status parser -----
     subparser.add_parser("status", help="Show workspace status.")
+
+    # ----- Agentic parser -----
+    run_parser = subparser.add_parser("run")
+
+    run_parser.add_argument(
+        'agent',
+        type=str,
+        help="[required] Agent name"
+    )
+
+    run_parser.add_argument(
+        "-p",
+        '--prompt',
+        type=str,
+        default=None
+    )
 
     return parser.parse_args()
 
@@ -110,6 +134,15 @@ def main() -> None:
             sys.exit(0)
         except ManifestNotFoundError:
             print(MSG_MANIFEST_NOT_FOUND)
+            sys.exit(1)
+
+    elif args.cmd == "run":
+        try:
+            agent = get_agent(workspace_dir, args.agent)
+            (run, exit_code) = spawn_agent(workspace_dir=workspace_dir, agent=agent, input=args.prompt)
+            sys.exit(0)
+        except UnknownAgentError as e:
+            print(f"{type(e).__name__}: {e}")
             sys.exit(1)
 
 

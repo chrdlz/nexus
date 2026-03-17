@@ -9,6 +9,7 @@ import datetime
 from pathlib import Path
 from typing import Literal, Optional
 import secrets
+import nexus.utils as u
 
 import yaml
 
@@ -164,3 +165,33 @@ def record_run(
         f.write(r.started_at + ": Run started\n")
 
     return r
+
+def end_run(
+    root: Path, 
+    run: Run,
+    exit_code: int,
+    output_text: str,
+    error_text: str = None,
+    ) -> Run:
+
+    log_path = get_log_path(root=root, log_id=run.id)
+
+    r = run.to_dict()
+
+    r['finished_at'] = str(datetime.datetime.now(datetime.timezone.utc)).split(".")[0]
+    r['status'] = "succeeded" if exit_code == 0 else "failed"
+    r['output'] = output_text
+    r['error'] = error_text if error_text!=None else None
+
+    # write on id.yamls
+    u.overwrite_yaml(
+        path=get_run_path(root=root, run_id=r["id"]),
+        data=r
+    )
+
+    # write on id.log
+    log_entry = r['finished_at'] + ": Run finished (" + r['status'] + ", exit=" + str(exit_code) + ")"
+    u.append_text(log_path, log_entry)
+
+    return r
+
