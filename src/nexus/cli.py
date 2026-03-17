@@ -11,6 +11,8 @@ from pprint import pprint
 import sys
 import traceback
 
+from yaml import add_path_resolver
+
 from nexus.orchestrator import spawn_agent
 from nexus.registry import UnknownAgentError, get_agent
 from .workspace import (
@@ -93,6 +95,34 @@ def parse_args() -> argparse.Namespace:
         '--prompt',
         type=str,
         default=None
+    )
+
+    # ----- Runs parser -----
+    runs_parser = subparser.add_parser("runs")
+
+    runs_subparser = runs_parser.add_subparsers(dest="cmd_runs", required=True)
+
+    runs_list_parser = runs_subparser.add_parser("list")
+    runs_list_opgroup = runs_list_parser.add_mutually_exclusive_group()
+    runs_list_opgroup.add_argument(
+        "-l",
+        "--last",
+        action="store_true",
+        help="only shows last run"
+    )
+
+    runs_list_opgroup.add_argument(
+        "-la",
+        "--list-all",
+        action="store_true",
+        help="shows all run"
+    )
+
+    runs_show_parser = runs_subparser.add_parser("show")
+    runs_show_parser.add_argument(
+        "id",
+        type=str,
+        help="[required] run id"
     )
 
     return parser.parse_args()
