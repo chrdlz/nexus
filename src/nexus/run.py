@@ -154,6 +154,22 @@ def record_run(
     agent: str,
     input: str,
     ) -> Run:
+    """Create and persist a new run record and initialize its log.
+
+    Parameters
+    ----------
+    root:
+        Workspace root directory.
+    agent:
+        Agent name being executed.
+    input:
+        Input/prompt text recorded with the run.
+
+    Returns
+    -------
+    Run
+        Newly created run object with status `"running"`.
+    """
 
     run_id = secrets.token_hex(8)   # 8 bytes → 16 hex chars
     log_path = get_log_path(root=root, log_id=run_id)
@@ -184,6 +200,26 @@ def end_run(
     output_text: str,
     error_text: str = None,
     ) -> Run:
+    """Finalize a run: set terminal status, persist YAML, and append to log.
+
+    Parameters
+    ----------
+    root:
+        Workspace root directory.
+    run:
+        Run object to finalize.
+    exit_code:
+        Subprocess exit code. `0` becomes `"succeeded"`, non-zero becomes `"failed"`.
+    output_text:
+        Short human-readable summary to store in the run YAML.
+    error_text:
+        Optional short error summary to store in the run YAML.
+
+    Returns
+    -------
+    dict
+        YAML-serializable run record (the run converted to a dict).
+    """
 
     log_path = get_log_path(root=root, log_id=run.id)
 
@@ -208,12 +244,29 @@ def end_run(
 
 
 def load_runs(workspace_root: Path) -> list[Run]:
+    """Load all run YAML records from `.nexus/runs` in a workspace.
+
+    Parameters
+    ----------
+    workspace_root:
+        Workspace root directory.
+
+    Returns
+    -------
+    list[Run]
+        All runs found under `.nexus/runs` (empty list if none exist).
+
+    Raises
+    ------
+    RunsPathNotExisting
+        If the `.nexus/runs` directory does not exist.
+    """
     cfg_path = workspace_root / ".nexus/runs"
 
     if not cfg_path.exists():
         raise RunsPathNotExisting()
 
-    runs_list = list[Path](cfg_path.glob("*.yaml")) or []
+    runs_list = list(cfg_path.glob("*.yaml")) or []
 
     if runs_list == []:
         return []
@@ -222,13 +275,34 @@ def load_runs(workspace_root: Path) -> list[Run]:
 
 
 def get_run(workspace_root: Path, mode: str | None = None, run_id: str | None = None) -> dict:
-    """Possible modes:
-    mode = "last"
-    model = "all" / None
+    """Query run records for a workspace.
+
+    Parameters
+    ----------
+    workspace_root:
+        Workspace root directory.
+    mode:
+        Query mode:
+        - `"all"` or `None`: return a dict of all runs keyed by run id
+        - `"last"`: return the most recent run (by `started_at`)
+        - `"single"`: return one run by `run_id`
+    run_id:
+        Run identifier used when `mode == "single"`.
+
+    Returns
+    -------
+    dict
+        A run dict (for `"last"`/`"single"`) or a dict of run dicts (for `"all"`).
+        Returns `{}` if no runs are found or the requested run id is missing.
+
+    Raises
+    ------
+    InvalidRunsModeError
+        If `mode` is not one of the supported values.
     """
     try:
         runs_list = load_runs(workspace_root)
-    except RunsPathNotExisting():
+    except RunsPathNotExisting:
         return {}
 
     if runs_list != []:
