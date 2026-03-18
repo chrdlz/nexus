@@ -213,7 +213,7 @@ def load_runs(workspace_root: Path) -> list[Run]:
     if not cfg_path.exists():
         raise RunsPathNotExisting()
 
-    runs_list = list(cfg_path.glob("*.yaml")) or []
+    runs_list = list[Path](cfg_path.glob("*.yaml")) or []
 
     if runs_list == []:
         return []
@@ -221,7 +221,7 @@ def load_runs(workspace_root: Path) -> list[Run]:
         return [Run.from_dict(u.laod_yaml(x)) for x in runs_list ]
 
 
-def get_run(workspace_root: Path, mode: str | None = None) -> dict:
+def get_run(workspace_root: Path, mode: str | None = None, run_id: str | None = None) -> dict:
     """Possible modes:
     mode = "last"
     model = "all" / None
@@ -250,6 +250,20 @@ def get_run(workspace_root: Path, mode: str | None = None) -> dict:
 
         elif mode == "last":
             return last_run.to_dict()
+
+        elif mode == "single":
+            run_found = {}
+
+            found = False
+            while not found:
+                for item in runs_list:
+                    if item.id == run_id:
+                        run_found = item.to_dict()
+                        found = True
+
+            if not found: return {}
+
+            return run_found
 
         else:
             raise InvalidRunsModeError() # this to be fixed / improved
