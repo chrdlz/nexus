@@ -4,12 +4,14 @@ This module defines the Run dataclass (agent run metadata and status), validates
 run status values, and provides helpers to resolve paths to run YAML files and
 log files under .nexus/runs and .nexus/logs.
 """
+from csv import Error
 from dataclasses import asdict, dataclass
 import datetime
 from pathlib import Path
 from typing import Literal, Optional
 import secrets
 import nexus.utils as u
+import datetime as dt
 
 import yaml
 
@@ -17,6 +19,8 @@ import yaml
 RUN_CLS_DEFAULT_FINISHEDAT = None
 RUN_CLS_DEFAULT_OUTPUT = None
 RUN_CLS_DEFAULT_ERROR = None
+
+PATH_TO_RUNS = ".nexus/runs"
 
 RunStatus = Literal["pending", "running", "succeeded", "failed"]
 
@@ -30,9 +34,16 @@ ALLOWED_RUN_STATUSES: set[RunStatus] = {
 
 class InvalidStatusError(Exception):
     """Raised when a run dict contains a status not in ALLOWED_RUN_STATUSES."""
-
     pass
 
+
+class RunsPathNotExisting(Exception):
+    """Raised when a run dict contains a status not in ALLOWED_RUN_STATUSES."""
+    pass
+
+
+class InvalidRunsModeError(Exception):
+    pass
 
 @dataclass
 class Run:
@@ -194,4 +205,56 @@ def end_run(
     u.append_text(log_path, log_entry)
 
     return r
+
+
+def load_runs(workspace_root: Path) -> list[Run]:
+    cfg_path = workspace_root / ".nexus/runs"
+
+    if not cfg_path.exists():
+        raise RunsPathNotExisting()
+
+    runs_list = list(cfg_path.glob("*.yaml")) or []
+
+    if runs_list == []:
+        return []
+    else:
+        return [Run.from_dict(u.laod_yaml(x)) for x in runs_list ]
+
+
+def get_run(workspace_root: Path, mode: str | None = None) -> dict:
+    """Possible modes:
+    mode = "last"
+    model = "all" / None
+    """
+    try:
+        runs_list = load_runs(workspace_root)
+    except RunsPathNotExisting():
+        return {}
+
+    if runs_list != []:
+
+        runs_dicts = {}
+        last_date_dt = None
+        last_run = None
+
+        for item in runs_list:
+            runs_dicts[item.id] = item.to_dict()
+            item_date_dt = dt.datetime.fromisoformat(item.started_at)
+
+            if (last_run is None) or (item_date_dt > last_date_dt):
+                last_run = item
+                last_date_dt = item_date_dt
+
+        if (mode == "all") or (mode is None):
+            return runs_dicts
+
+        elif mode == "last":
+            return last_run.to_dict()
+
+        else:
+            raise InvalidRunsModeError() # this to be fixed / improved
+
+    else:
+        print("No runs found.")
+        return {}
 
