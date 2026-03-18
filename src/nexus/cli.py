@@ -15,6 +15,7 @@ from yaml import add_path_resolver
 
 from nexus.orchestrator import spawn_agent
 from nexus.registry import UnknownAgentError, get_agent
+from nexus.run import get_run
 from .workspace import (
     init_workspace,
     load_workspace,
@@ -174,6 +175,28 @@ def main() -> None:
         except UnknownAgentError as e:
             print(f"{type(e).__name__}: {e}")
             sys.exit(1)
+
+    elif args.cmd == "runs":
+        if args.cmd_runs == "list":
+            if args.last:
+                # list all runs id
+                runs_dict = get_run(workspace_dir, "last")
+
+            elif args.list_all:
+                # list last run id
+                runs_dict = get_run(workspace_dir, "all")
+
+            else:
+                # list all runs id
+                runs_dict = get_run(workspace_dir, "all")
+
+            pprint(runs_dict)
+            sys.exit(0)
+
+        elif args.cmd_runs == "show":
+            run_dict = get_run(workspace_dir, "single", args.id)
+            pprint(run_dict)
+            sys.exit(0)
 
 
 if __name__=="__main__":
