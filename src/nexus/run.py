@@ -4,12 +4,14 @@ This module defines the Run dataclass (agent run metadata and status), validates
 run status values, and provides helpers to resolve paths to run YAML files and
 log files under .nexus/runs and .nexus/logs.
 """
+from csv import Error
 from dataclasses import asdict, dataclass
 import datetime
 from pathlib import Path
 from typing import Literal, Optional
 import secrets
 import nexus.utils as u
+import datetime as dt
 
 import yaml
 
@@ -17,6 +19,8 @@ import yaml
 RUN_CLS_DEFAULT_FINISHEDAT = None
 RUN_CLS_DEFAULT_OUTPUT = None
 RUN_CLS_DEFAULT_ERROR = None
+
+PATH_TO_RUNS = ".nexus/runs"
 
 RunStatus = Literal["pending", "running", "succeeded", "failed"]
 
@@ -30,9 +34,16 @@ ALLOWED_RUN_STATUSES: set[RunStatus] = {
 
 class InvalidStatusError(Exception):
     """Raised when a run dict contains a status not in ALLOWED_RUN_STATUSES."""
-
     pass
 
+
+class RunsPathNotExisting(Exception):
+    """Raised when a run dict contains a status not in ALLOWED_RUN_STATUSES."""
+    pass
+
+
+class InvalidRunsModeError(Exception):
+    pass
 
 @dataclass
 class Run:
@@ -143,6 +154,22 @@ def record_run(
     agent: str,
     input: str,
     ) -> Run:
+    """Create and persist a new run record and initialize its log.
+
+    Parameters
+    ----------
+    root:
+        Workspace root directory.
+    agent:
+        Agent name being executed.
+    input:
+        Input/prompt text recorded with the run.
+
+    Returns
+    -------
+    Run
+        Newly created run object with status `"running"`.
+    """
 
     run_id = secrets.token_hex(8)   # 8 bytes → 16 hex chars
     log_path = get_log_path(root=root, log_id=run_id)
@@ -173,6 +200,26 @@ def end_run(
     output_text: str,
     error_text: str = None,
     ) -> Run:
+    """Finalize a run: set terminal status, persist YAML, and append to log.
+
+    Parameters
+    ----------
+    root:
+        Workspace root directory.
+    run:
+        Run object to finalize.
+    exit_code:
+        Subprocess exit code. `0` becomes `"succeeded"`, non-zero becomes `"failed"`.
+    output_text:
+        Short human-readable summary to store in the run YAML.
+    error_text:
+        Optional short error summary to store in the run YAML.
+
+    Returns
+    -------
+    dict
+        YAML-serializable run record (the run converted to a dict).
+    """
 
     log_path = get_log_path(root=root, log_id=run.id)
 
@@ -194,4 +241,108 @@ def end_run(
     u.append_text(log_path, log_entry)
 
     return r
+
+
+def load_runs(workspace_root: Path) -> list[Run]:
+    """Load all run YAML records from `.nexus/runs` in a workspace.
+
+    Parameters
+    ----------
+    workspace_root:
+        Workspace root directory.
+
+    Returns
+    -------
+    list[Run]
+        All runs found under `.nexus/runs` (empty list if none exist).
+
+    Raises
+    ------
+    RunsPathNotExisting
+        If the `.nexus/runs` directory does not exist.
+    """
+    cfg_path = workspace_root / ".nexus/runs"
+
+    if not cfg_path.exists():
+        raise RunsPathNotExisting()
+
+    runs_list = list(cfg_path.glob("*.yaml")) or []
+
+    if runs_list == []:
+        return []
+    else:
+        return [Run.from_dict(u.laod_yaml(x)) for x in runs_list ]
+
+
+def get_run(workspace_root: Path, mode: str | None = None, run_id: str | None = None) -> dict:
+    """Query run records for a workspace.
+
+    Parameters
+    ----------
+    workspace_root:
+        Workspace root directory.
+    mode:
+        Query mode:
+        - `"all"` or `None`: return a dict of all runs keyed by run id
+        - `"last"`: return the most recent run (by `started_at`)
+        - `"single"`: return one run by `run_id`
+    run_id:
+        Run identifier used when `mode == "single"`.
+
+    Returns
+    -------
+    dict
+        A run dict (for `"last"`/`"single"`) or a dict of run dicts (for `"all"`).
+        Returns `{}` if no runs are found or the requested run id is missing.
+
+    Raises
+    ------
+    InvalidRunsModeError
+        If `mode` is not one of the supported values.
+    """
+    try:
+        runs_list = load_runs(workspace_root)
+    except RunsPathNotExisting:
+        return {}
+
+    if runs_list != []:
+
+        runs_dicts = {}
+        last_date_dt = None
+        last_run = None
+
+        for item in runs_list:
+            runs_dicts[item.id] = item.to_dict()
+            item_date_dt = dt.datetime.fromisoformat(item.started_at)
+
+            if (last_run is None) or (item_date_dt > last_date_dt):
+                last_run = item
+                last_date_dt = item_date_dt
+
+        if (mode == "all") or (mode is None):
+            return runs_dicts
+
+        elif mode == "last":
+            return last_run.to_dict()
+
+        elif mode == "single":
+            run_found = {}
+
+            found = False
+            while not found:
+                for item in runs_list:
+                    if item.id == run_id:
+                        run_found = item.to_dict()
+                        found = True
+
+            if not found: return {}
+
+            return run_found
+
+        else:
+            raise InvalidRunsModeError() # this to be fixed / improved
+
+    else:
+        print("No runs found.")
+        return {}
 

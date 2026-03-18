@@ -1,14 +1,40 @@
-from dataclasses import dataclass
+"""Small filesystem/YAML utilities used by Nexus.
+
+These helpers centralize common persistence behaviors (read YAML, write YAML,
+append to log files) so other modules stay focused on orchestration logic.
+"""
+
 from pathlib import Path
 import yaml
 
 
 def laod_yaml(path: Path) -> dict:
-    with open(path, 'r', encodinf="utf-8") as f:
+    """Load a YAML file into a dictionary.
+
+    Parameters
+    ----------
+    path:
+        Path to a YAML file.
+
+    Returns
+    -------
+    dict
+        Parsed YAML content. If the file is empty, returns an empty dict.
+    """
+    with open(path, 'r', encoding="utf-8") as f:
         return yaml.safe_load(f) or {} # empty file -> None
 
 
 def overwrite_yaml(path: str, data: dict) -> None:
+    """Overwrite a YAML file with the given dictionary.
+
+    Parameters
+    ----------
+    path:
+        Destination path to write.
+    data:
+        YAML-serializable dictionary to write.
+    """
     p = Path(path)
     with p.open("w", encoding="utf-8") as f:
         yaml.safe_dump(data, f, sort_keys=False, default_flow_style=False)

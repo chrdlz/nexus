@@ -1,3 +1,12 @@
+"""Agent execution orchestration.
+
+This module implements the Stage-1 orchestration loop:
+
+1) record a new run (run YAML + initial log line)
+2) execute the agent command inside the workspace
+3) finalize the run with status/output/error summary and append logs
+"""
+
 from pathlib import Path
 import traceback
 from nexus.agent import Agent
@@ -11,6 +20,22 @@ RUN_FAILED = "Run Failed"
 RUN_FAILED_BEFORE_RUNNING = "Run Failed before running"
 
 def spawn_agent(workspace_dir: Path, agent: Agent, input: str) -> (Run, int):
+    """Record, execute, and finalize a single agent run.
+
+    Parameters
+    ----------
+    workspace_dir:
+        Workspace root directory (contains manifest and `.nexus/`).
+    agent:
+        Agent definition (loaded from `agents.yaml`).
+    input:
+        Optional input/prompt text to record in the run metadata.
+
+    Returns
+    -------
+    (Run, int)
+        Finalized run (as returned by `end_run`) and the command exit code.
+    """
     r = record_run(root=workspace_dir, agent=agent.name, input=input)
     log_file = get_log_path(workspace_dir, log_id=r.id)
 
@@ -47,6 +72,22 @@ def spawn_agent(workspace_dir: Path, agent: Agent, input: str) -> (Run, int):
 
 
 def run_and_log_separate(running_dir: Path, agent: Agent, log_path: Path) -> int:
+    """Run the agent command and stream its output into the run log file.
+
+    Parameters
+    ----------
+    running_dir:
+        Working directory used for the subprocess execution.
+    agent:
+        Agent whose command will be executed.
+    log_path:
+        Path to the run log file (append mode).
+
+    Returns
+    -------
+    int
+        Subprocess return code.
+    """
     with log_path.open("a", encoding="utf-8") as f:
         result = subprocess.run(
             args=agent.command,
