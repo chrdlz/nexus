@@ -119,6 +119,25 @@ def parse_args() -> argparse.Namespace:
         help="shows all run"
     )
 
+    runs_list_parser.add_argument(
+        "-s",
+        "--sort",
+        type=str,
+        default="None",
+        help="""
+            [Optional] Runs list sort option: please decide if the cli has to sort the runs before printing them.
+            Fields
+            """
+    )
+
+    runs_list_parser.add_argument(
+        "-o",
+        "--order",
+        type=str,
+        default="None",
+        help="[Optional] Pease decide the sorting order (asc/desc).",
+    )
+
     runs_show_parser = runs_subparser.add_parser("show")
     runs_show_parser.add_argument(
         "id",
@@ -171,7 +190,7 @@ def main() -> None:
         try:
             agent = get_agent(workspace_dir, args.agent)
             (run, exit_code) = spawn_agent(workspace_dir=workspace_dir, agent=agent, input=args.prompt)
-            sys.exit(0)
+            sys.exit(exit_code)
         except UnknownAgentError as e:
             print(f"{type(e).__name__}: {e}")
             sys.exit(1)
@@ -179,16 +198,20 @@ def main() -> None:
     elif args.cmd == "runs":
         if args.cmd_runs == "list":
             if args.last:
-                # list all runs id
+                # list last started id
                 runs_dict = get_run(workspace_dir, "last")
 
-            elif args.list_all:
-                # list last run id
-                runs_dict = get_run(workspace_dir, "all")
-
             else:
-                # list all runs id
-                runs_dict = get_run(workspace_dir, "all")
+                sort_by = None
+                if args.sort is not None:
+                    sort_by = args.sort
+                
+                if args.order is None or args.order in ["asc", "desc"]:
+                    runs_dict = get_run(workspace_dir,"all",opt_sort=sort_by,opt_order=args.order)
+
+                else:
+                    print("error input not recognized ")
+                    sys.exit(1)
 
             pprint(runs_dict)
             sys.exit(0)
