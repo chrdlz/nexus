@@ -8,7 +8,7 @@ from csv import Error
 from dataclasses import asdict, dataclass
 import datetime
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 import secrets
 import nexus.utils as u
 import datetime as dt
@@ -287,7 +287,7 @@ def get_run(
     *,
     opt_sort: str = "started_at",
     opt_order: str = "desc"
-    ) -> dict:
+    ) -> list:
     """Query run records for a workspace.
 
     Parameters
@@ -316,7 +316,7 @@ def get_run(
     try:
         runs_list = load_runs(workspace_root)
     except RunsPathNotExisting:
-        return {}
+        return []
 
     if runs_list != []:
 
@@ -333,11 +333,11 @@ def get_run(
                 last_date_dt = item_date_dt
 
         if (mode == "all") or (mode is None):
-
-            if opt_sort not in ["id", "agent", "started_at", "finished_at"]:
+            
+            if opt_sort not in ["id", "agent", "started_at", "finished_at"] and opt_sort is not None:
                 raise InvalidSortOptionError()
             
-            if opt_order not in ["asc", "desc"]:
+            if opt_order not in ["asc", "desc"] and opt_order is not None:
                 raise InvalidOrderOptionError()
 
             runs_dict_sorted_ordered = []
@@ -345,7 +345,7 @@ def get_run(
                 runs_dict_sorted_ordered.append(tmp_run_dict)
 
             # sort
-            def make_key_fn(sort_key: str):
+            def make_key_fn(sort_key: str = "started_at"):
                 def key_fn(item: dict) -> str:
                     value = item.get(sort_key)
                     return "" if value is None else value
@@ -354,21 +354,21 @@ def get_run(
             runs_dict_sorted_ordered.sort(key=make_key_fn(opt_sort), reverse=(opt_order=="desc"))
 
             return runs_dict_sorted_ordered
+
         elif mode == "last":
-            return last_run.to_dict()
+            return [last_run.to_dict()]
 
         elif mode == "single":
             run_found = {}
 
             for item in runs_list:
                 if item.id == run_id:
-                    run_found = item.to_dict() 
+                    return [item.to_dict()]
 
-            return run_found
+            return [run_found]
 
         else:
             raise InvalidRunsModeError() # this to be fixed / improved
 
     else:
-        print("No runs found.")
-        return {}
+        return []
