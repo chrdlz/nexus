@@ -45,6 +45,12 @@ class RunsPathNotExisting(Exception):
 class InvalidRunsModeError(Exception):
     pass
 
+class InvalidSortOptionError(Exception):
+    pass
+
+class InvalidOrderOptionError(Exception):
+    pass
+
 @dataclass
 class Run:
     """Single agent run: id, agent, status, timestamps, input/output, and log path."""
@@ -274,7 +280,14 @@ def load_runs(workspace_root: Path) -> list[Run]:
         return [Run.from_dict(u.laod_yaml(x)) for x in runs_list ]
 
 
-def get_run(workspace_root: Path, mode: str | None = None, run_id: str | None = None) -> dict:
+def get_run(
+    workspace_root: Path,
+    mode: str | None = None,
+    run_id: str | None = None,
+    *,
+    opt_sort: str = "started_at",
+    opt_order: str = "desc"
+    ) -> dict:
     """Query run records for a workspace.
 
     Parameters
@@ -320,22 +333,36 @@ def get_run(workspace_root: Path, mode: str | None = None, run_id: str | None = 
                 last_date_dt = item_date_dt
 
         if (mode == "all") or (mode is None):
-            return runs_dicts
 
+            if opt_sort not in ["id", "agent", "started_at", "finished_at"]:
+                raise InvalidSortOptionError()
+            
+            if opt_order not in ["asc", "desc"]:
+                raise InvalidOrderOptionError()
+
+            runs_dict_sorted_ordered = []
+            for tmp_id, tmp_run_dict in runs_dicts.items():
+                runs_dict_sorted_ordered.append(tmp_run_dict)
+
+            # sort
+            def make_key_fn(sort_key: str):
+                def key_fn(item: dict) -> str:
+                    value = item.get(sort_key)
+                    return "" if value is None else value
+                return key_fn
+
+            runs_dict_sorted_ordered.sort(key=make_key_fn(opt_sort), reverse=(opt_order=="desc"))
+
+            return runs_dict_sorted_ordered
         elif mode == "last":
             return last_run.to_dict()
 
         elif mode == "single":
             run_found = {}
 
-            found = False
-            while not found:
-                for item in runs_list:
-                    if item.id == run_id:
-                        run_found = item.to_dict()
-                        found = True
-
-            if not found: return {}
+            for item in runs_list:
+                if item.id == run_id:
+                    run_found = item.to_dict() 
 
             return run_found
 
@@ -345,4 +372,3 @@ def get_run(workspace_root: Path, mode: str | None = None, run_id: str | None = 
     else:
         print("No runs found.")
         return {}
-
