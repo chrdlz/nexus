@@ -4,11 +4,11 @@ This module defines the Run dataclass (agent run metadata and status), validates
 run status values, and provides helpers to resolve paths to run YAML files and
 log files under .nexus/runs and .nexus/logs.
 """
-from csv import Error
+import copy
 from dataclasses import asdict, dataclass
 import datetime
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Literal, Optional
 import secrets
 import nexus.utils as u
 import datetime as dt
@@ -45,11 +45,14 @@ class RunsPathNotExisting(Exception):
 class InvalidRunsModeError(Exception):
     pass
 
+
 class InvalidSortOptionError(Exception):
     pass
 
+
 class InvalidOrderOptionError(Exception):
     pass
+
 
 @dataclass
 class Run:
@@ -223,30 +226,30 @@ def end_run(
 
     Returns
     -------
-    dict
-        YAML-serializable run record (the run converted to a dict).
+    Run
+        Finalized run object with updated status/timestamps/output/error.
     """
 
     log_path = get_log_path(root=root, log_id=run.id)
 
-    r = run.to_dict()
+    ended_run = copy.deepcopy(run)
 
-    r['finished_at'] = str(datetime.datetime.now(datetime.timezone.utc)).split(".")[0]
-    r['status'] = "succeeded" if exit_code == 0 else "failed"
-    r['output'] = output_text
-    r['error'] = error_text if error_text!=None else None
+    ended_run.finished_at = str(datetime.datetime.now(datetime.timezone.utc)).split(".")[0]
+    ended_run.status = "succeeded" if exit_code == 0 else "failed"
+    ended_run.output = output_text
+    ended_run.error = error_text if error_text!=None else None
 
     # write on id.yamls
     u.overwrite_yaml(
-        path=get_run_path(root=root, run_id=r["id"]),
-        data=r
+        path=get_run_path(root=root, run_id=ended_run.id),
+        data=ended_run.to_dict()
     )
 
     # write on id.log
-    log_entry = r['finished_at'] + ": Run finished (" + r['status'] + ", exit=" + str(exit_code) + ")"
+    log_entry = ended_run.finished_at + ": Run finished (" + ended_run.status + ", exit=" + str(exit_code) + ")"
     u.append_text(log_path, log_entry)
 
-    return r
+    return ended_run
 
 
 def load_runs(workspace_root: Path) -> list[Run]:
