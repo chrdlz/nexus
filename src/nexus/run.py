@@ -31,6 +31,9 @@ ALLOWED_RUN_STATUSES: set[RunStatus] = {
     "failed",
 }
 
+ALLOWED_SORT_FIELDS = ["id", "agent", "started_at", "finished_at"]
+ALLOWED_SORT_ORDERS = ["asc", "desc"]
+
 
 class InvalidStatusError(Exception):
     """Raised when a run dict contains a status not in ALLOWED_RUN_STATUSES."""
@@ -275,7 +278,7 @@ def load_runs(workspace_root: Path) -> list[Run]:
     if not cfg_path.exists():
         raise RunsPathNotExisting()
 
-    runs_list = list(cfg_path.glob("*.yaml")) or []
+    runs_list: list[Path] = list(cfg_path.glob("*.yaml")) or []
 
     if runs_list == []:
         return []
@@ -299,22 +302,35 @@ def get_run(
         Workspace root directory.
     mode:
         Query mode:
-        - `"all"` or `None`: return a dict of all runs keyed by run id
+        - `"all"` or `None`: return all runs
         - `"last"`: return the most recent run (by `started_at`)
         - `"single"`: return one run by `run_id`
     run_id:
         Run identifier used when `mode == "single"`.
+    opt_sort:
+        Field used when sorting in `"all"` mode. Must be one of
+        `ALLOWED_SORT_FIELDS`.
+    opt_order:
+        Sort order used in `"all"` mode. Must be one of
+        `ALLOWED_SORT_ORDERS`.
 
     Returns
     -------
-    dict
-        A run dict (for `"last"`/`"single"`) or a dict of run dicts (for `"all"`).
-        Returns `{}` if no runs are found or the requested run id is missing.
+    list[Run]
+        - `"all"`/`None`: sorted list of runs
+        - `"last"`: one-item list containing the latest run
+        - `"single"`: one-item list containing the matched run, or empty list
+          if not found
+        Returns an empty list if the runs directory does not exist or has no runs.
 
     Raises
     ------
     InvalidRunsModeError
         If `mode` is not one of the supported values.
+    InvalidSortOptionError
+        If `opt_sort` is not supported in `"all"` mode.
+    InvalidOrderOptionError
+        If `opt_order` is not supported in `"all"` mode.
     """
     try:
         runs_list = load_runs(workspace_root)
@@ -323,12 +339,10 @@ def get_run(
 
     if runs_list != []:
 
-        runs_dicts = {}
         last_date_dt = None
         last_run = None
 
         for item in runs_list:
-            runs_dicts[item.id] = item.to_dict()
             item_date_dt = dt.datetime.fromisoformat(item.started_at)
 
             if (last_run is None) or (item_date_dt > last_date_dt):
@@ -337,41 +351,38 @@ def get_run(
 
         if (mode == "all") or (mode is None):
             
-            if opt_sort not in ["id", "agent", "started_at", "finished_at"] and opt_sort is not None:
+            if opt_sort not in ALLOWED_SORT_FIELDS:
                 raise InvalidSortOptionError()
             
-            if opt_order not in ["asc", "desc"] and opt_order is not None:
+            if opt_order not in ALLOWED_SORT_ORDERS:
                 raise InvalidOrderOptionError()
 
-            runs_dict_sorted_ordered = []
-            for tmp_id, tmp_run_dict in runs_dicts.items():
-                runs_dict_sorted_ordered.append(tmp_run_dict)
+            runs_list_sorted_ordered: list[Run] = list(runs_list)
 
             # sort
-            def make_key_fn(sort_key: str = "started_at"):
-                def key_fn(item: dict) -> str:
-                    value = item.get(sort_key)
+            def make_key_fn(sort_key: str):
+                def key_fn(item: Run) -> str:
+                    value =  getattr(item, sort_key)
                     return "" if value is None else value
                 return key_fn
 
-            runs_dict_sorted_ordered.sort(key=make_key_fn(opt_sort), reverse=(opt_order=="desc"))
+            runs_list_sorted_ordered.sort(key=make_key_fn(opt_sort), reverse=(opt_order=="desc"))
 
-            return runs_dict_sorted_ordered
+            return runs_list_sorted_ordered
 
         elif mode == "last":
-            return [last_run.to_dict()]
+            return [last_run]
 
         elif mode == "single":
-            run_found = {}
 
             for item in runs_list:
                 if item.id == run_id:
-                    return [item.to_dict()]
+                    return [item]
 
-            return [run_found]
+            return []
 
         else:
-            raise InvalidRunsModeError() # this to be fixed / improved
+            raise InvalidRunsModeError()
 
     else:
         return []
