@@ -29,6 +29,8 @@ MSG_MANIFEST_ALREADY_EXISTS = "Manifest.yaml already exists in current directory
 MSG_MANIFEST_EXISTS = "Existing manifest."
 MSG_MANIFEST_EXPECTED_BUT_NOT_FOUND = "Warning: manifest was expected but has not been found."
 MSG_MANIFEST_NOT_FOUND = "Error: manifest.yaml not found in this directory. Is this a workspace?"
+MSG_RUN_NOT_FOUND = "Error: run not found"
+MSG_NO_RUNS_FOUND = "Error: no runs found"
 
 def parse_args() -> argparse.Namespace:
     """Build and parse CLI arguments (global -C and subcommands init, status).
@@ -109,14 +111,14 @@ def parse_args() -> argparse.Namespace:
         "-l",
         "--last",
         action="store_true",
-        help="only shows last run"
+        help="shows only the latest started run"
     )
 
     runs_list_opgroup.add_argument(
         "-la",
         "--list-all",
         action="store_true",
-        help="shows all run"
+        help="shows all runs"
     )
 
     runs_list_parser.add_argument(
@@ -125,8 +127,12 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help="""
-            [Optional] Runs list sort option: please decide if the cli has to sort the runs before printing them.
-            Fields
+            [Optional] Runs list sort option: sort runs before printing.
+            Sorting fields:
+             id
+             agent
+             started_at (<-- default if --sort not set)
+             finished_at
             """
     )
 
@@ -135,7 +141,7 @@ def parse_args() -> argparse.Namespace:
         "--order",
         type=str,
         default=None,
-        help="[Optional] Pease decide the sorting order (asc/desc).",
+        help="[Optional] Set the sorting order (asc/desc).",
     )
 
     runs_show_parser = runs_subparser.add_parser("show")
@@ -202,14 +208,19 @@ def main() -> None:
                 runs_dict = get_run(workspace_dir, "last")
 
             else:
-
                 runs_dict = get_run(workspace_dir,"all",opt_sort=args.sort,opt_order=args.order)
 
+            if runs_dict == []:
+                print(f"{MSG_NO_RUNS_FOUND}.")
+                sys.exit(1)
             pprint(runs_dict)
             sys.exit(0)
 
         elif args.cmd_runs == "show":
             run_dict = get_run(workspace_dir, "single", args.id)
+            if run_dict == []:
+                print(f"{MSG_RUN_NOT_FOUND}: {args.id}")
+                sys.exit(1)
             pprint(run_dict)
             sys.exit(0)
 
