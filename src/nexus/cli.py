@@ -1,15 +1,20 @@
 """CLI entrypoint: argument parsing and command dispatch for Nexus.
 
-Provides the ``nexus`` command with subcommands (e.g. init, status)
-and -C/--directory for workspace path. Delegates to workspace and run modules
-for actual work.
+Provides the ``nexus`` command with subcommands:
+- `init`
+- `status`
+- `run`
+- `runs list`
+- `runs show`
+
+Supports `-C/--directory` to target a specific workspace root and delegates
+execution to workspace, registry, orchestrator, and run-query modules.
 """
 import argparse
 from ast import arg
 from pathlib import Path
 from pprint import pprint
 import sys
-import traceback
 
 from yaml import add_path_resolver
 
@@ -29,15 +34,19 @@ MSG_MANIFEST_ALREADY_EXISTS = "Manifest.yaml already exists in current directory
 MSG_MANIFEST_EXISTS = "Existing manifest."
 MSG_MANIFEST_EXPECTED_BUT_NOT_FOUND = "Warning: manifest was expected but has not been found."
 MSG_MANIFEST_NOT_FOUND = "Error: manifest.yaml not found in this directory. Is this a workspace?"
+MSG_RUN_NOT_FOUND = "Error: run not found"
+MSG_NO_RUNS_FOUND = "Error: no runs found"
 
 def parse_args() -> argparse.Namespace:
-    """Build and parse CLI arguments (global -C and subcommands init, status).
+    """Build and parse CLI arguments.
 
     Returns
     -------
     argparse.Namespace
-        Parsed arguments; ``cmd`` is the subcommand name, plus command-specific
-        fields (e.g. name, description, version for init).
+        Parsed arguments with:
+        - global fields (e.g. `directory`)
+        - `cmd` for top-level subcommand selection
+        - command-specific fields (e.g. `name`, `agent`, `cmd_runs`, `id`)
     """
     parser = argparse.ArgumentParser(
         prog="nexus",
@@ -109,14 +118,37 @@ def parse_args() -> argparse.Namespace:
         "-l",
         "--last",
         action="store_true",
-        help="only shows last run"
+        help="shows only the latest started run"
     )
 
     runs_list_opgroup.add_argument(
         "-la",
         "--list-all",
         action="store_true",
-        help="shows all run"
+        help="shows all runs"
+    )
+
+    runs_list_parser.add_argument(
+        "-s",
+        "--sort",
+        type=str,
+        default=None,
+        help="""
+            [Optional] Runs list sort option: sort runs before printing.
+            Sorting fields:
+             id
+             agent
+             started_at (<-- default if --sort not set)
+             finished_at
+            """
+    )
+
+    runs_list_parser.add_argument(
+        "-o",
+        "--order",
+        type=str,
+        default=None,
+        help="[Optional] Set the sorting order (asc/desc).",
     )
 
     runs_show_parser = runs_subparser.add_parser("show")
@@ -130,7 +162,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    """Parse CLI args, dispatch to init or status, and exit with appropriate code."""
+    """Dispatch parsed CLI commands and exit with appropriate status codes.
+
+    Command groups handled:
+    - workspace management (`init`, `status`)
+    - agent execution (`run`)
+    - run inspection (`runs list`, `runs show`)
+    """
     args = parse_args()
 
     workspace_dir = Path(args.directory) if args.directory is not None else Path.cwd()
@@ -171,7 +209,7 @@ def main() -> None:
         try:
             agent = get_agent(workspace_dir, args.agent)
             (run, exit_code) = spawn_agent(workspace_dir=workspace_dir, agent=agent, input=args.prompt)
-            sys.exit(0)
+            sys.exit(exit_code)
         except UnknownAgentError as e:
             print(f"{type(e).__name__}: {e}")
             sys.exit(1)
@@ -179,22 +217,23 @@ def main() -> None:
     elif args.cmd == "runs":
         if args.cmd_runs == "list":
             if args.last:
-                # list all runs id
+                # list last started id
                 runs_dict = get_run(workspace_dir, "last")
 
-            elif args.list_all:
-                # list last run id
-                runs_dict = get_run(workspace_dir, "all")
-
             else:
-                # list all runs id
-                runs_dict = get_run(workspace_dir, "all")
+                runs_dict = get_run(workspace_dir,"all",opt_sort=args.sort,opt_order=args.order)
 
+            if runs_dict == []:
+                print(f"{MSG_NO_RUNS_FOUND}.")
+                sys.exit(1)
             pprint(runs_dict)
             sys.exit(0)
 
         elif args.cmd_runs == "show":
             run_dict = get_run(workspace_dir, "single", args.id)
+            if run_dict == []:
+                print(f"{MSG_RUN_NOT_FOUND}: {args.id}")
+                sys.exit(1)
             pprint(run_dict)
             sys.exit(0)
 

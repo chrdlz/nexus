@@ -4,7 +4,7 @@ This module defines the Run dataclass (agent run metadata and status), validates
 run status values, and provides helpers to resolve paths to run YAML files and
 log files under .nexus/runs and .nexus/logs.
 """
-from csv import Error
+import copy
 from dataclasses import asdict, dataclass
 import datetime
 from pathlib import Path
@@ -31,6 +31,11 @@ ALLOWED_RUN_STATUSES: set[RunStatus] = {
     "failed",
 }
 
+ALLOWED_SORT_FIELDS = ["id", "agent", "started_at", "finished_at"]
+ALLOWED_SORT_ORDERS = ["asc", "desc"]
+DEFAULT_OPT_SORT = "started_at"
+DEFAULT_OPT_ORDER = "desc"
+
 
 class InvalidStatusError(Exception):
     """Raised when a run dict contains a status not in ALLOWED_RUN_STATUSES."""
@@ -38,12 +43,24 @@ class InvalidStatusError(Exception):
 
 
 class RunsPathNotExisting(Exception):
-    """Raised when a run dict contains a status not in ALLOWED_RUN_STATUSES."""
+    """Raised when `.nexus/runs` is missing in the selected workspace."""
     pass
 
 
 class InvalidRunsModeError(Exception):
+    """Raised when `get_run()` receives an unsupported mode."""
     pass
+
+
+class InvalidSortOptionError(Exception):
+    """Raised when `opt_sort` is not one of `ALLOWED_SORT_FIELDS`."""
+    pass
+
+
+class InvalidOrderOptionError(Exception):
+    """Raised when `opt_order` is not one of `ALLOWED_SORT_ORDERS`."""
+    pass
+
 
 @dataclass
 class Run:
@@ -217,30 +234,30 @@ def end_run(
 
     Returns
     -------
-    dict
-        YAML-serializable run record (the run converted to a dict).
+    Run
+        Finalized run object with updated status/timestamps/output/error.
     """
 
     log_path = get_log_path(root=root, log_id=run.id)
 
-    r = run.to_dict()
+    ended_run = copy.deepcopy(run)
 
-    r['finished_at'] = str(datetime.datetime.now(datetime.timezone.utc)).split(".")[0]
-    r['status'] = "succeeded" if exit_code == 0 else "failed"
-    r['output'] = output_text
-    r['error'] = error_text if error_text!=None else None
+    ended_run.finished_at = str(datetime.datetime.now(datetime.timezone.utc)).split(".")[0]
+    ended_run.status = "succeeded" if exit_code == 0 else "failed"
+    ended_run.output = output_text
+    ended_run.error = error_text if error_text!=None else None
 
     # write on id.yamls
     u.overwrite_yaml(
-        path=get_run_path(root=root, run_id=r["id"]),
-        data=r
+        path=get_run_path(root=root, run_id=ended_run.id),
+        data=ended_run.to_dict()
     )
 
     # write on id.log
-    log_entry = r['finished_at'] + ": Run finished (" + r['status'] + ", exit=" + str(exit_code) + ")"
+    log_entry = ended_run.finished_at + ": Run finished (" + ended_run.status + ", exit=" + str(exit_code) + ")"
     u.append_text(log_path, log_entry)
 
-    return r
+    return ended_run
 
 
 def load_runs(workspace_root: Path) -> list[Run]:
@@ -266,7 +283,7 @@ def load_runs(workspace_root: Path) -> list[Run]:
     if not cfg_path.exists():
         raise RunsPathNotExisting()
 
-    runs_list = list(cfg_path.glob("*.yaml")) or []
+    runs_list: list[Path] = list(cfg_path.glob("*.yaml")) or []
 
     if runs_list == []:
         return []
@@ -274,7 +291,13 @@ def load_runs(workspace_root: Path) -> list[Run]:
         return [Run.from_dict(u.laod_yaml(x)) for x in runs_list ]
 
 
-def get_run(workspace_root: Path, mode: str | None = None, run_id: str | None = None) -> dict:
+def get_run(
+    workspace_root: Path,
+    mode: str | None = None,
+    run_id: str | None = None,
+    opt_sort: str = None,
+    opt_order: str = None,
+    ) -> list:
     """Query run records for a workspace.
 
     Parameters
@@ -283,36 +306,50 @@ def get_run(workspace_root: Path, mode: str | None = None, run_id: str | None = 
         Workspace root directory.
     mode:
         Query mode:
-        - `"all"` or `None`: return a dict of all runs keyed by run id
+        - `"all"` or `None`: return all runs
         - `"last"`: return the most recent run (by `started_at`)
         - `"single"`: return one run by `run_id`
     run_id:
         Run identifier used when `mode == "single"`.
+    opt_sort:
+        Field used when sorting in `"all"` mode. If `None`, defaults to
+        `DEFAULT_OPT_SORT`. Otherwise it must be one of `ALLOWED_SORT_FIELDS`.
+    opt_order:
+        Sort order used in `"all"` mode. If `None`, defaults to
+        `DEFAULT_OPT_ORDER`. Otherwise it must be one of `ALLOWED_SORT_ORDERS`.
 
     Returns
     -------
-    dict
-        A run dict (for `"last"`/`"single"`) or a dict of run dicts (for `"all"`).
-        Returns `{}` if no runs are found or the requested run id is missing.
+    list[Run]
+        - `"all"`/`None`: sorted list of runs
+        - `"last"`: one-item list containing the latest run
+        - `"single"`: one-item list containing the matched run, or empty list
+          if not found
+        Returns an empty list if the runs directory does not exist or has no runs.
 
     Raises
     ------
     InvalidRunsModeError
         If `mode` is not one of the supported values.
+    InvalidSortOptionError
+        If `opt_sort` is not supported in `"all"` mode.
+    InvalidOrderOptionError
+        If `opt_order` is not supported in `"all"` mode.
     """
+
+    # Path not exists
     try:
         runs_list = load_runs(workspace_root)
     except RunsPathNotExisting:
-        return {}
+        return []
 
+    # Path exists
     if runs_list != []:
 
-        runs_dicts = {}
         last_date_dt = None
         last_run = None
 
         for item in runs_list:
-            runs_dicts[item.id] = item.to_dict()
             item_date_dt = dt.datetime.fromisoformat(item.started_at)
 
             if (last_run is None) or (item_date_dt > last_date_dt):
@@ -320,29 +357,40 @@ def get_run(workspace_root: Path, mode: str | None = None, run_id: str | None = 
                 last_date_dt = item_date_dt
 
         if (mode == "all") or (mode is None):
-            return runs_dicts
+            
+            if opt_sort is None: opt_sort = DEFAULT_OPT_SORT
+            if opt_order is None: opt_order = DEFAULT_OPT_ORDER
+
+            if opt_sort not in ALLOWED_SORT_FIELDS:
+                raise InvalidSortOptionError()
+            
+            if opt_order not in ALLOWED_SORT_ORDERS:
+                raise InvalidOrderOptionError()
+
+            runs_list_sorted_ordered: list[Run] = list(runs_list)
+
+            # sort
+            def make_key_fn(sort_key: str):
+                def key_fn(item: Run) -> str:
+                    value =  getattr(item, sort_key)
+                    return "" if value is None else value
+                return key_fn
+
+            runs_list_sorted_ordered.sort(key=make_key_fn(opt_sort), reverse=(opt_order=="desc"))
+
+            return runs_list_sorted_ordered
 
         elif mode == "last":
-            return last_run.to_dict()
+            return [last_run]
 
         elif mode == "single":
-            run_found = {}
-
-            found = False
-            while not found:
-                for item in runs_list:
-                    if item.id == run_id:
-                        run_found = item.to_dict()
-                        found = True
-
-            if not found: return {}
-
-            return run_found
+            for item in runs_list:
+                if item.id == run_id:
+                    return [item]
+            return []
 
         else:
-            raise InvalidRunsModeError() # this to be fixed / improved
+            raise InvalidRunsModeError()
 
     else:
-        print("No runs found.")
-        return {}
-
+        return []
