@@ -33,6 +33,8 @@ ALLOWED_RUN_STATUSES: set[RunStatus] = {
 
 ALLOWED_SORT_FIELDS = ["id", "agent", "started_at", "finished_at"]
 ALLOWED_SORT_ORDERS = ["asc", "desc"]
+DEFAULT_OPT_SORT = "started_at"
+DEFAULT_OPT_ORDER = "desc"
 
 
 class InvalidStatusError(Exception):
@@ -291,8 +293,8 @@ def get_run(
     mode: str | None = None,
     run_id: str | None = None,
     *,
-    opt_sort: str = "started_at",
-    opt_order: str = "desc"
+    opt_sort: str | None,
+    opt_order: str | None,
     ) -> list:
     """Query run records for a workspace.
 
@@ -350,6 +352,9 @@ def get_run(
                 last_date_dt = item_date_dt
 
         if (mode == "all") or (mode is None):
+            
+            if opt_sort is None: opt_sort = DEFAULT_OPT_SORT
+            if opt_order is None: opt_order = DEFAULT_OPT_ORDER
             
             if opt_sort not in ALLOWED_SORT_FIELDS:
                 raise InvalidSortOptionError()
