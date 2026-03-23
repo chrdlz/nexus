@@ -1,8 +1,14 @@
 """CLI entrypoint: argument parsing and command dispatch for Nexus.
 
-Provides the ``nexus`` command with subcommands (e.g. init, status)
-and -C/--directory for workspace path. Delegates to workspace and run modules
-for actual work.
+Provides the ``nexus`` command with subcommands:
+- `init`
+- `status`
+- `run`
+- `runs list`
+- `runs show`
+
+Supports `-C/--directory` to target a specific workspace root and delegates
+execution to workspace, registry, orchestrator, and run-query modules.
 """
 import argparse
 from ast import arg
@@ -33,13 +39,15 @@ MSG_RUN_NOT_FOUND = "Error: run not found"
 MSG_NO_RUNS_FOUND = "Error: no runs found"
 
 def parse_args() -> argparse.Namespace:
-    """Build and parse CLI arguments (global -C and subcommands init, status).
+    """Build and parse CLI arguments.
 
     Returns
     -------
     argparse.Namespace
-        Parsed arguments; ``cmd`` is the subcommand name, plus command-specific
-        fields (e.g. name, description, version for init).
+        Parsed arguments with:
+        - global fields (e.g. `directory`)
+        - `cmd` for top-level subcommand selection
+        - command-specific fields (e.g. `name`, `agent`, `cmd_runs`, `id`)
     """
     parser = argparse.ArgumentParser(
         prog="nexus",
@@ -155,7 +163,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    """Parse CLI args, dispatch to init or status, and exit with appropriate code."""
+    """Dispatch parsed CLI commands and exit with appropriate status codes.
+
+    Command groups handled:
+    - workspace management (`init`, `status`)
+    - agent execution (`run`)
+    - run inspection (`runs list`, `runs show`)
+    """
     args = parse_args()
 
     workspace_dir = Path(args.directory) if args.directory is not None else Path.cwd()

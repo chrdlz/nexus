@@ -43,19 +43,22 @@ class InvalidStatusError(Exception):
 
 
 class RunsPathNotExisting(Exception):
-    """Raised when a run dict contains a status not in ALLOWED_RUN_STATUSES."""
+    """Raised when `.nexus/runs` is missing in the selected workspace."""
     pass
 
 
 class InvalidRunsModeError(Exception):
+    """Raised when `get_run()` receives an unsupported mode."""
     pass
 
 
 class InvalidSortOptionError(Exception):
+    """Raised when `opt_sort` is not one of `ALLOWED_SORT_FIELDS`."""
     pass
 
 
 class InvalidOrderOptionError(Exception):
+    """Raised when `opt_order` is not one of `ALLOWED_SORT_ORDERS`."""
     pass
 
 
@@ -309,11 +312,11 @@ def get_run(
     run_id:
         Run identifier used when `mode == "single"`.
     opt_sort:
-        Field used when sorting in `"all"` mode. Must be one of
-        `ALLOWED_SORT_FIELDS`.
+        Field used when sorting in `"all"` mode. If `None`, defaults to
+        `DEFAULT_OPT_SORT`. Otherwise it must be one of `ALLOWED_SORT_FIELDS`.
     opt_order:
-        Sort order used in `"all"` mode. Must be one of
-        `ALLOWED_SORT_ORDERS`.
+        Sort order used in `"all"` mode. If `None`, defaults to
+        `DEFAULT_OPT_ORDER`. Otherwise it must be one of `ALLOWED_SORT_ORDERS`.
 
     Returns
     -------
