@@ -15,7 +15,6 @@ from ast import arg
 from pathlib import Path
 from pprint import pprint
 import sys
-import traceback
 
 from yaml import add_path_resolver
 
