@@ -123,7 +123,7 @@ def parse_args() -> argparse.Namespace:
         "-s",
         "--sort",
         type=str,
-        default="None",
+        default=None,
         help="""
             [Optional] Runs list sort option: please decide if the cli has to sort the runs before printing them.
             Fields
@@ -134,7 +134,7 @@ def parse_args() -> argparse.Namespace:
         "-o",
         "--order",
         type=str,
-        default="None",
+        default=None,
         help="[Optional] Pease decide the sorting order (asc/desc).",
     )
 
@@ -202,16 +202,8 @@ def main() -> None:
                 runs_dict = get_run(workspace_dir, "last")
 
             else:
-                sort_by = None
-                if args.sort is not None:
-                    sort_by = args.sort
-                
-                if args.order is None or args.order in ["asc", "desc"]:
-                    runs_dict = get_run(workspace_dir,"all",opt_sort=sort_by,opt_order=args.order)
 
-                else:
-                    print("error input not recognized ")
-                    sys.exit(1)
+                runs_dict = get_run(workspace_dir,"all",opt_sort=args.sort,opt_order=args.order)
 
             pprint(runs_dict)
             sys.exit(0)
