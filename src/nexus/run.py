@@ -292,9 +292,8 @@ def get_run(
     workspace_root: Path,
     mode: str | None = None,
     run_id: str | None = None,
-    *,
-    opt_sort: str | None,
-    opt_order: str | None,
+    opt_sort: str = None,
+    opt_order: str = None,
     ) -> list:
     """Query run records for a workspace.
 
@@ -334,11 +333,14 @@ def get_run(
     InvalidOrderOptionError
         If `opt_order` is not supported in `"all"` mode.
     """
+
+    # Path not exists
     try:
         runs_list = load_runs(workspace_root)
     except RunsPathNotExisting:
         return []
 
+    # Path exists
     if runs_list != []:
 
         last_date_dt = None
@@ -355,7 +357,7 @@ def get_run(
             
             if opt_sort is None: opt_sort = DEFAULT_OPT_SORT
             if opt_order is None: opt_order = DEFAULT_OPT_ORDER
-            
+
             if opt_sort not in ALLOWED_SORT_FIELDS:
                 raise InvalidSortOptionError()
             
@@ -379,11 +381,9 @@ def get_run(
             return [last_run]
 
         elif mode == "single":
-
             for item in runs_list:
                 if item.id == run_id:
                     return [item]
-
             return []
 
         else:
